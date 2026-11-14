@@ -1,0 +1,1930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>水果消消乐</title>
+<style>
+  :root {
+    --board-size: min(92vw, 60vh, 580px);
+    --ink: #432b40;
+    --muted: #9a7d90;
+    --pink: #ff4f86;
+    --orange: #ff8a1e;
+    --red: #ef3f5f;
+    --fruit-font: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI Symbol", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { min-height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100svh;
+    padding: 20px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+    color: var(--ink);
+    font-family: "Arial Rounded MT Bold", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    background:
+      radial-gradient(1100px 760px at -8% -16%, #ffe4af 0%, transparent 60%),
+      radial-gradient(900px 680px at 108% -4%, #ffd1e8 0%, transparent 58%),
+      radial-gradient(900px 700px at 50% 116%, #c8f8e8 0%, transparent 58%),
+      linear-gradient(135deg, #fffaf1 0%, #fff1f5 48%, #eefbf6 100%);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    font: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+  }
+
+  .bg-decor {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(8px);
+    opacity: 0.52;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+
+  .blob-1 {
+    width: 340px;
+    height: 340px;
+    left: -110px;
+    top: -100px;
+    background: radial-gradient(circle, #ffd667 0%, #ffd66788 42%, transparent 70%);
+  }
+
+  .blob-2 {
+    width: 420px;
+    height: 420px;
+    right: -150px;
+    top: 8%;
+    background: radial-gradient(circle, #ff9cc8 0%, #ff9cc866 45%, transparent 72%);
+    animation-delay: -4s;
+    animation-duration: 15s;
+  }
+
+  .blob-3 {
+    width: 460px;
+    height: 460px;
+    left: 18%;
+    bottom: -260px;
+    background: radial-gradient(circle, #79e7c3 0%, #79e7c355 45%, transparent 72%);
+    animation-delay: -8s;
+    animation-duration: 17s;
+  }
+
+  .floating-fruit {
+    position: absolute;
+    opacity: 0.17;
+    filter: saturate(1.2);
+    user-select: none;
+    animation: decorFloat 8s ease-in-out infinite;
+  }
+
+  .decor-a { left: 3%; top: 18%; font-size: clamp(38px, 5vw, 68px); transform: rotate(-14deg); }
+  .decor-b { right: 3.5%; top: 24%; font-size: clamp(34px, 4.6vw, 62px); animation-delay: -2.4s; }
+  .decor-c { left: 7%; bottom: 10%; font-size: clamp(30px, 4vw, 54px); animation-delay: -4.8s; }
+  .decor-d { right: 8%; bottom: 7%; font-size: clamp(36px, 5vw, 64px); animation-delay: -6.2s; }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 760px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 2vh, 20px);
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.67);
+    box-shadow:
+      0 14px 40px rgba(201, 88, 124, 0.12),
+      inset 0 1px 0 #fff;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    animation: topbarIn 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .brand-icon {
+    width: clamp(42px, 6vw, 54px);
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    font-family: var(--fruit-font);
+    font-size: clamp(24px, 3.6vw, 32px);
+    background: linear-gradient(145deg, #fff6d4, #ffd0e0);
+    box-shadow:
+      inset 0 2px 0 #fff,
+      0 7px 16px rgba(255, 102, 130, 0.2);
+    transform: rotate(-6deg);
+  }
+
+  .brand-copy { min-width: 0; }
+
+  .brand-copy h1 {
+    margin: 0;
+    font-size: clamp(22px, 3.4vw, 31px);
+    line-height: 1.12;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: #ff4f7f;
+    background: linear-gradient(100deg, #ff7226 0%, #ff3f83 52%, #8b4dff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .brand-copy p {
+    margin: 5px 0 0;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: clamp(6px, 1.2vw, 12px);
+    flex: 0 0 auto;
+  }
+
+  .stat {
+    position: relative;
+    min-width: clamp(72px, 9vw, 96px);
+    padding: 7px 13px 8px;
+    overflow: hidden;
+    text-align: center;
+    border-radius: 18px;
+    background: #fffdfb;
+    box-shadow:
+      0 4px 0 rgba(158, 94, 117, 0.07),
+      0 8px 20px rgba(170, 89, 120, 0.1),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  }
+
+  .stat::after {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    bottom: 0;
+    height: 3px;
+    border-radius: 999px 999px 0 0;
+    opacity: 0.65;
+  }
+
+  .score-stat::after { background: linear-gradient(90deg, #ffc34f, #ff7b20); }
+  .moves-stat::after { background: linear-gradient(90deg, #ff82ad, #ff3c7f); }
+
+  .stat-label {
+    display: block;
+    margin-bottom: 2px;
+    color: #a08395;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+  }
+
+  .stat strong {
+    display: block;
+    font-size: clamp(21px, 3vw, 26px);
+    line-height: 1;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .score-stat strong { color: #f27613; }
+  .moves-stat strong { color: #ed3e7e; transition: color 0.2s ease; }
+  .moves-stat.low strong { color: #e22828; }
+
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(145deg, #ffb35f, #ff5c92);
+    box-shadow:
+      0 5px 14px rgba(255, 84, 130, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    font-size: 23px;
+    font-weight: 900;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .icon-btn:hover {
+    transform: rotate(-20deg) scale(1.07);
+    box-shadow:
+      0 8px 18px rgba(255, 84, 130, 0.36),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .icon-btn:active { transform: rotate(-20deg) scale(0.95); }
+
+  .sound-btn {
+    font-family: var(--fruit-font);
+    font-size: 19px;
+  }
+
+  .sound-btn.is-muted {
+    background: linear-gradient(145deg, #f5edf1, #d8c9d2);
+    box-shadow:
+      0 4px 10px rgba(126, 95, 113, 0.16),
+      inset 0 1px 0 #fff;
+    filter: saturate(0.45);
+  }
+
+  .game {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(10px, 1.6vh, 14px);
+    min-height: 0;
+    animation: boardIn 0.6s 0.08s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  }
+
+  .board-frame {
+    width: var(--board-size);
+    max-width: 100%;
+    padding: clamp(7px, 1.4vmin, 11px);
+    border-radius: clamp(23px, 4vmin, 34px);
+    background: linear-gradient(140deg, #ffffff, #fff0f5);
+    box-shadow:
+      0 25px 56px rgba(220, 78, 127, 0.25),
+      0 11px 24px rgba(255, 158, 81, 0.15),
+      inset 0 2px 0 #fff;
+  }
+
+  .board {
+    position: relative;
+    isolation: isolate;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: clamp(17px, 3vmin, 26px);
+    background: linear-gradient(135deg, #ff9e6d 0%, #ff6f9e 36%, #b76cf0 70%, #7f86ff 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+      inset 0 14px 28px rgba(110, 40, 100, 0.2);
+    touch-action: manipulation;
+  }
+
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+  }
+
+  .well { position: relative; }
+
+  .well::before {
+    content: "";
+    position: absolute;
+    inset: 6%;
+    border-radius: 23%;
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.26),
+      inset 0 -1px 1px rgba(88, 18, 79, 0.07);
+  }
+
+  .well.dark::before { background: rgba(91, 31, 94, 0.075); }
+
+  .tile-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
+  .tile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 10%;
+    height: 10%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+    z-index: 1;
+    transform: translate(calc(var(--col) * 100%), calc(var(--row) * 100%));
+    transition: transform 0.24s cubic-bezier(0.22, 0.75, 0.3, 1.04);
+    will-change: transform;
+  }
+
+  .fruit {
+    position: relative;
+    width: 86%;
+    height: 86%;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 23%;
+    background: var(--fruit-bg, #fff);
+    box-shadow:
+      inset 0 2px 1px rgba(255, 255, 255, 0.95),
+      inset 0 -4px 8px rgba(102, 44, 83, 0.08),
+      0 4px 7px rgba(81, 24, 89, 0.2);
+    font-family: var(--fruit-font);
+    font-size: clamp(17px, calc(var(--board-size) * 0.058), 34px);
+    line-height: 1;
+    user-select: none;
+    transition: transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .fruit::after {
+    content: "";
+    position: absolute;
+    left: 17%;
+    top: 10%;
+    width: 31%;
+    height: 16%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.68);
+    filter: blur(0.5px);
+    transform: rotate(-18deg);
+    pointer-events: none;
+  }
+
+  .tile.f0 { --fruit-bg: linear-gradient(150deg, #fff8f5, #ffd6d4); }
+  .tile.f1 { --fruit-bg: linear-gradient(150deg, #fffaf0, #ffe0a4); }
+  .tile.f2 { --fruit-bg: linear-gradient(150deg, #faf5ff, #e5ceff); }
+  .tile.f3 { --fruit-bg: linear-gradient(150deg, #fff6fa, #ffd1e2); }
+  .tile.f4 { --fruit-bg: linear-gradient(150deg, #f4fff8, #c9f4d5); }
+  .tile.f5 { --fruit-bg: linear-gradient(150deg, #fff6f3, #ffcbc0); }
+
+  .tile.selected { z-index: 4; }
+
+  .tile.selected .fruit {
+    animation: selectedPulse 1s ease-in-out infinite;
+    box-shadow:
+      inset 0 2px 1px #fff,
+      0 0 0 3px rgba(255, 255, 255, 0.95),
+      0 0 0 6px rgba(255, 211, 67, 0.95),
+      0 12px 22px rgba(84, 16, 64, 0.3);
+  }
+
+  .tile.invalid { z-index: 4; }
+  .tile.invalid .fruit { animation: invalidShake 0.38s ease; }
+
+  .tile.clearing {
+    z-index: 6;
+    pointer-events: none;
+  }
+
+  .tile.clearing .fruit {
+    animation: fruitPop 0.34s cubic-bezier(0.3, 0.9, 0.4, 1) forwards;
+  }
+
+  .fruit.spawn {
+    animation: spawnPop 0.36s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+  }
+
+  .board.is-shuffling .tile .fruit {
+    animation: shuffleWiggle 0.28s ease-in-out infinite alternate;
+  }
+
+  .board.is-revealing .tile .fruit {
+    animation: shuffleReveal 0.46s cubic-bezier(0.2, 0.8, 0.3, 1.15) both;
+  }
+
+  .fx-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 8;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .score-float {
+    position: absolute;
+    font-size: clamp(18px, calc(var(--board-size) * 0.052), 30px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow:
+      0 2px 0 #ff3d75,
+      0 4px 12px rgba(255, 61, 117, 0.5),
+      0 0 14px rgba(255, 255, 255, 0.85);
+    transform: translate(-50%, -50%);
+    animation: scoreRise 0.95s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+  }
+
+  .toast {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    z-index: 20;
+    width: max-content;
+    max-width: 84%;
+    padding: 15px 22px 16px;
+    visibility: hidden;
+    opacity: 0;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 20px;
+    color: #fff;
+    background: rgba(54, 27, 54, 0.9);
+    box-shadow: 0 18px 44px rgba(42, 10, 42, 0.36);
+    text-align: center;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transform: translate(-50%, -50%) scale(0.88);
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s cubic-bezier(0.2, 0.8, 0.3, 1.2),
+      visibility 0.25s;
+  }
+
+  .toast.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .toast strong {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    font-size: clamp(17px, 2.5vmin, 21px);
+    letter-spacing: 0.02em;
+  }
+
+  .toast-sub {
+    display: block;
+    margin-top: 5px;
+    color: #ffd9e8;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    padding: 14px;
+    visibility: hidden;
+    opacity: 0;
+    background: rgba(55, 23, 54, 0.42);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: opacity 0.25s ease, visibility 0.25s;
+  }
+
+  .overlay.show {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .overlay-card {
+    width: min(82%, 340px);
+    padding: clamp(16px, 4vmin, 27px);
+    border-radius: clamp(20px, 4vmin, 27px);
+    background: linear-gradient(160deg, #fffdf7, #fff2e3);
+    box-shadow:
+      0 24px 50px rgba(55, 12, 48, 0.3),
+      inset 0 2px 0 #fff;
+    text-align: center;
+    transform: translateY(12px) scale(0.9);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.15);
+  }
+
+  .overlay.show .overlay-card { transform: translateY(0) scale(1); }
+
+  .overlay-emoji {
+    font-family: var(--fruit-font);
+    font-size: clamp(34px, 7vmin, 50px);
+    line-height: 1;
+    filter: drop-shadow(0 6px 10px rgba(218, 77, 88, 0.22));
+    transform: rotate(-5deg);
+  }
+
+  .overlay h2 {
+    margin: 5px 0 5px;
+    color: #4a2441;
+    font-size: clamp(21px, 4vmin, 28px);
+    font-weight: 900;
+    letter-spacing: 0.03em;
+  }
+
+  .overlay-note {
+    margin: 0 0 clamp(10px, 2vmin, 14px);
+    color: #b0889c;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .final-score {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: clamp(8px, 2vmin, 12px);
+    border-radius: 17px;
+    background: #fff7e8;
+    box-shadow: inset 0 0 0 1px rgba(255, 205, 133, 0.25);
+  }
+
+  .final-score span {
+    color: #b48b83;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+  }
+
+  .final-score strong {
+    color: #ff4f83;
+    font-size: clamp(30px, 6.5vmin, 42px);
+    font-weight: 900;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .play-again {
+    width: 100%;
+    margin-top: clamp(11px, 2.4vmin, 16px);
+    padding: clamp(9px, 2vmin, 12px);
+    border: 0;
+    border-radius: 15px;
+    color: #fff;
+    background: linear-gradient(135deg, #ff9838, #ff4f86);
+    box-shadow:
+      0 5px 0 #d92f65,
+      0 10px 20px rgba(229, 57, 111, 0.27);
+    font-size: clamp(14px, 2.4vmin, 16px);
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .play-again:hover { filter: brightness(1.04); }
+
+  .play-again:active {
+    transform: translateY(4px);
+    box-shadow:
+      0 1px 0 #d92f65,
+      0 4px 9px rgba(229, 57, 111, 0.23);
+  }
+
+  .tip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 8px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    border-radius: 999px;
+    color: #8e6b83;
+    background: rgba(255, 255, 255, 0.48);
+    font-size: clamp(11px, 1.65vmin, 12.5px);
+    font-weight: 650;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .tip .tip-icon {
+    font-family: var(--fruit-font);
+    font-size: 14px;
+  }
+
+  .pop {
+    animation: popNumber 0.3s cubic-bezier(0.2, 0.8, 0.3, 1.3);
+  }
+
+  @keyframes topbarIn {
+    from { opacity: 0; transform: translateY(-14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes boardIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes drift {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(26px, 20px, 0) scale(1.08); }
+  }
+
+  @keyframes decorFloat {
+    0%, 100% { translate: 0 0; rotate: -4deg; }
+    50% { translate: 0 -14px; rotate: 5deg; }
+  }
+
+  @keyframes selectedPulse {
+    0%, 100% { transform: translateY(-3px) scale(1.1); }
+    50% { transform: translateY(-5px) scale(1.13); }
+  }
+
+  @keyframes invalidShake {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    20% { transform: translateX(-11%) rotate(-7deg); }
+    42% { transform: translateX(10%) rotate(7deg); }
+    64% { transform: translateX(-7%) rotate(-4deg); }
+    82% { transform: translateX(5%) rotate(3deg); }
+  }
+
+  @keyframes fruitPop {
+    0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+    32% { transform: scale(1.28) rotate(-7deg); opacity: 1; filter: brightness(1.2); }
+    100% { transform: scale(0.03) rotate(20deg); opacity: 0; filter: brightness(1.5); }
+  }
+
+  @keyframes spawnPop {
+    0% { transform: scale(0); opacity: 0; }
+    65% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes shuffleWiggle {
+    from { transform: rotate(-8deg) scale(0.96); }
+    to { transform: rotate(8deg) scale(1.07); }
+  }
+
+  @keyframes shuffleReveal {
+    0% { transform: scale(0.4) rotate(-15deg); opacity: 0.3; }
+    70% { transform: scale(1.12) rotate(5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+
+  @keyframes scoreRise {
+    0% { opacity: 0; transform: translate(-50%, -30%) scale(0.4) rotate(-5deg); }
+    20% { opacity: 1; transform: translate(-50%, -65%) scale(1.18) rotate(2deg); }
+    72% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -205%) scale(1) rotate(0); }
+  }
+
+  @keyframes popNumber {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.24); }
+    100% { transform: scale(1); }
+  }
+
+  @media (hover: hover) {
+    .tile:hover .fruit {
+      transform: translateY(-2px) scale(1.045);
+      box-shadow:
+        inset 0 2px 1px rgba(255, 255, 255, 0.95),
+        inset 0 -4px 8px rgba(102, 44, 83, 0.08),
+        0 8px 13px rgba(81, 24, 89, 0.24);
+    }
+
+    .tile.selected:hover .fruit { transform: none; }
+    .tile.clearing:hover .fruit,
+    .tile.invalid:hover .fruit { transform: none; }
+  }
+
+  @media (max-width: 640px) {
+    :root { --board-size: min(92vw, 58vh, 580px); }
+
+    body { padding: 12px; }
+
+    .app { gap: 12px; }
+
+    .topbar {
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 22px;
+    }
+
+    .brand { flex: 1 1 auto; }
+    .brand-icon { width: 39px; border-radius: 12px; font-size: 23px; }
+    .brand-copy h1 { font-size: 21px; }
+    .brand-copy p { display: none; }
+
+    .scoreboard { width: 100%; gap: 8px; }
+    .stat { flex: 1 1 0; min-width: 0; padding: 6px 9px 7px; }
+    .stat-label { font-size: 9.5px; }
+    .stat strong { font-size: 22px; }
+    .icon-btn { width: 42px; height: 42px; flex: 0 0 42px; }
+    .tip { padding: 7px 12px; }
+  }
+
+  @media (max-width: 370px) {
+    :root { --board-size: min(94vw, 54vh, 580px); }
+    body { padding: 9px; }
+    .brand-copy h1 { font-size: 19px; }
+    .stat strong { font-size: 20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="bg-decor" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+    <span class="floating-fruit decor-a">🍊</span>
+    <span class="floating-fruit decor-b">🍇</span>
+    <span class="floating-fruit decor-c">🍉</span>
+    <span class="floating-fruit decor-d">🍓</span>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">🍓</div>
+        <div class="brand-copy">
+          <h1>水果消消乐</h1>
+          <p>交换相邻水果，连成 3 个以上！</p>
+        </div>
+      </div>
+
+      <div class="scoreboard" aria-live="polite">
+        <div class="stat score-stat">
+          <span class="stat-label">得分</span>
+          <strong id="scoreEl">0</strong>
+        </div>
+        <div class="stat moves-stat" id="movesCard">
+          <span class="stat-label">剩余步数</span>
+          <strong id="movesEl">30</strong>
+        </div>
+        <button class="icon-btn sound-btn" id="soundBtn" type="button" title="关闭音效" aria-label="音效开关" aria-pressed="true">🔊</button>
+        <button class="icon-btn" id="restartBtn" type="button" title="重新开始" aria-label="重新开始游戏">↻</button>
+      </div>
+    </header>
+
+    <main class="game">
+      <div class="board-frame">
+        <div class="board" id="board" aria-label="水果消消乐棋盘">
+          <div class="grid-bg" id="gridBg" aria-hidden="true"></div>
+          <div class="tile-layer" id="tileLayer"></div>
+          <div class="fx-layer" id="fxLayer" aria-hidden="true"></div>
+
+          <div class="toast" id="toast" role="status" aria-live="assertive" aria-hidden="true">
+            <strong id="toastTitle">没有可用步数</strong>
+            <span class="toast-sub" id="toastSub">水果们正在自动重新洗牌…</span>
+          </div>
+
+          <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlayTitle" aria-hidden="true">
+            <div class="overlay-card">
+              <div class="overlay-emoji" aria-hidden="true">🍒</div>
+              <h2 id="overlayTitle">游戏结束</h2>
+              <p class="overlay-note">步数用完啦，再来一局吧！</p>
+              <div class="final-score">
+                <span>最终得分</span>
+                <strong id="finalScore">0</strong>
+              </div>
+              <button class="play-again" id="playAgainBtn" type="button">再来一局</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="tip">
+        <span class="tip-icon" aria-hidden="true">💡</span>
+        点击两个相邻水果交换 · 三个同款连成一线即可消除
+      </p>
+    </main>
+  </div>
+
+<script>
+  'use strict';
+
+  const ROWS = 10;
+  const COLS = 10;
+  const START_MOVES = 30;
+  const MATCH_POINTS = 10;
+  const FRUITS = ['🍎', '🍊', '🍇', '🍓', '🍉', '🍒'];
+  const FRUIT_NAMES = {
+    '🍎': '苹果',
+    '🍊': '橙子',
+    '🍇': '葡萄',
+    '🍓': '草莓',
+    '🍉': '西瓜',
+    '🍒': '樱桃'
+  };
+  const SOUND_STORAGE_KEY = 'fruit-match-sound';
+
+  const boardEl = document.getElementById('board');
+  const tileLayer = document.getElementById('tileLayer');
+  const gridBg = document.getElementById('gridBg');
+  const fxLayer = document.getElementById('fxLayer');
+  const scoreEl = document.getElementById('scoreEl');
+  const movesEl = document.getElementById('movesEl');
+  const movesCard = document.getElementById('movesCard');
+  const soundBtn = document.getElementById('soundBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const toastEl = document.getElementById('toast');
+  const toastTitle = document.getElementById('toastTitle');
+  const toastSub = document.getElementById('toastSub');
+  const overlayEl = document.getElementById('overlay');
+  const finalScoreEl = document.getElementById('finalScore');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+
+  let board = [];
+  let tiles = [];
+  let selectedCell = null;
+  let score = 0;
+  let movesLeft = START_MOVES;
+  let busy = false;
+  let gameOver = false;
+  let gameToken = 0;
+  let toastTimer = null;
+
+  let soundEnabled = true;
+  try {
+    const savedSound = window.localStorage.getItem(SOUND_STORAGE_KEY);
+    if (savedSound === 'off') soundEnabled = false;
+  } catch (error) {
+    // Local storage can be unavailable for local files in some browsers.
+  }
+
+  let audioContext = null;
+  let audioMaster = null;
+  let noiseBuffer = null;
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function getAudioContext() {
+    if (audioContext) return audioContext;
+
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) return null;
+
+    try {
+      audioContext = new AudioCtor();
+      audioMaster = audioContext.createGain();
+      audioMaster.gain.value = 0.55;
+
+      if (typeof audioContext.createDynamicsCompressor === 'function') {
+        const compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.value = -20;
+        compressor.knee.value = 22;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.004;
+        compressor.release.value = 0.24;
+        audioMaster.connect(compressor);
+        compressor.connect(audioContext.destination);
+      } else {
+        audioMaster.connect(audioContext.destination);
+      }
+    } catch (error) {
+      audioContext = null;
+      audioMaster = null;
+    }
+
+    return audioContext;
+  }
+
+  function unlockAudio() {
+    if (!soundEnabled) return null;
+    const ctx = getAudioContext();
+    if (!ctx) return null;
+    if (ctx.state !== 'running' && typeof ctx.resume === 'function') {
+      const resumed = ctx.resume();
+      if (resumed && typeof resumed.catch === 'function') {
+        resumed.catch(() => {});
+      }
+    }
+    return ctx;
+  }
+
+  function createPanner(ctx, pan) {
+    if (!audioMaster) return null;
+
+    if (typeof ctx.createStereoPanner === 'function') {
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = Math.max(-0.8, Math.min(0.8, pan || 0));
+      panner.connect(audioMaster);
+      return panner;
+    }
+
+    return audioMaster;
+  }
+
+  function getNoiseBuffer(ctx) {
+    if (!noiseBuffer || noiseBuffer.sampleRate !== ctx.sampleRate) {
+      const length = Math.max(1, Math.floor(ctx.sampleRate * 0.25));
+      noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+    }
+    return noiseBuffer;
+  }
+
+  function scheduleTone(ctx, options) {
+    if (!audioMaster) return;
+
+    const type = options.type || 'sine';
+    const frequency = Math.max(20, options.frequency);
+    const endFrequency = Math.max(20, options.endFrequency || frequency);
+    const start = options.start;
+    const attack = options.attack === undefined ? 0.005 : options.attack;
+    const decay = options.decay === undefined ? 0.18 : options.decay;
+    const volume = options.volume === undefined ? 0.04 : options.volume;
+    const panner = createPanner(ctx, options.pan || 0);
+    if (!panner) return;
+
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    if (endFrequency !== frequency) {
+      oscillator.frequency.exponentialRampToValueAtTime(endFrequency, start + attack + decay * 0.55);
+    }
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + attack + decay);
+
+    oscillator.connect(gain);
+    gain.connect(panner);
+    oscillator.start(start);
+    oscillator.stop(start + attack + decay + 0.03);
+  }
+
+  function scheduleNoise(ctx, options) {
+    if (!audioMaster) return;
+
+    const start = options.start;
+    const duration = options.duration === undefined ? 0.08 : options.duration;
+    const volume = options.volume === undefined ? 0.025 : options.volume;
+    const frequency = Math.max(40, options.frequency || 900);
+    const endFrequency = Math.max(40, options.endFrequency || frequency);
+    const panner = createPanner(ctx, options.pan || 0);
+    if (!panner) return;
+
+    const source = ctx.createBufferSource();
+    source.buffer = getNoiseBuffer(ctx);
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = options.q === undefined ? 0.9 : options.q;
+    filter.frequency.setValueAtTime(frequency, start);
+    filter.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + Math.min(0.01, duration * 0.25));
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    source.connect(filter);
+    filter.connect(gain);
+    gain.connect(panner);
+    source.start(start);
+    source.stop(start + duration + 0.02);
+  }
+
+  function columnToPan(col) {
+    const normalized = (col / (COLS - 1)) * 2 - 1;
+    return Math.max(-0.65, Math.min(0.65, normalized * 0.65));
+  }
+
+  function playSwapSound() {
+    if (!soundEnabled) return;
+    const ctx = unlockAudio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.006;
+
+    scheduleNoise(ctx, {
+      start: start,
+      duration: 0.075,
+      volume: 0.016,
+      frequency: 520,
+      endFrequency: 1700,
+      q: 1,
+      pan: 0
+    });
+    scheduleTone(ctx, {
+      type: 'sine',
+      frequency: 410,
+      endFrequency: 290,
+      start: start,
+      attack: 0.003,
+      decay: 0.055,
+      volume: 0.013,
+      pan: 0
+    });
+  }
+
+  function playMatchSound(clusterSize, multiplier, groupIndex, col) {
+    if (!soundEnabled || groupIndex > 4) return;
+    const ctx = unlockAudio();
+    if (!ctx) return;
+
+    const start = ctx.currentTime + 0.012 + groupIndex * 0.065;
+    const pan = columnToPan(col);
+    const semitone = Math.min(
+      19,
+      (multiplier - 1) * 2 + groupIndex + Math.max(0, clusterSize - 3)
+    );
+    const frequency = 523.25 * Math.pow(2, semitone / 12);
+    const power = Math.min(1.35, 0.9 + Math.max(0, clusterSize - 3) * 0.1);
+
+    scheduleNoise(ctx, {
+      start: start,
+      duration: 0.085,
+      volume: 0.028 * power,
+      frequency: 900,
+      endFrequency: 1750,
+      q: 0.85,
+      pan: pan
+    });
+    scheduleTone(ctx, {
+      type: 'sine',
+      frequency: frequency * 0.5,
+      endFrequency: frequency * 0.33,
+      start: start,
+      attack: 0.004,
+      decay: 0.1,
+      volume: 0.04 * power,
+      pan: pan
+    });
+    scheduleTone(ctx, {
+      type: 'triangle',
+      frequency: frequency,
+      start: start + 0.014,
+      attack: 0.005,
+      decay: 0.22,
+      volume: 0.05 * power,
+      pan: pan
+    });
+    scheduleTone(ctx, {
+      type: 'sine',
+      frequency: frequency * 2,
+      start: start + 0.03,
+      attack: 0.004,
+      decay: 0.16,
+      volume: 0.024 * power,
+      pan: pan
+    });
+
+    if (clusterSize >= 4) {
+      scheduleTone(ctx, {
+        type: 'sine',
+        frequency: frequency * 1.5,
+        start: start + 0.095,
+        attack: 0.004,
+        decay: 0.2,
+        volume: 0.03 * power,
+        pan: pan
+      });
+    }
+
+    if (multiplier > 1) {
+      scheduleTone(ctx, {
+        type: 'sine',
+        frequency: frequency * 2.5,
+        start: start + 0.125,
+        attack: 0.004,
+        decay: 0.18,
+        volume: 0.014 * power,
+        pan: pan
+      });
+    }
+  }
+
+  function playInvalidSound() {
+    if (!soundEnabled) return;
+    const ctx = unlockAudio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.01;
+
+    scheduleTone(ctx, {
+      type: 'triangle',
+      frequency: 190,
+      endFrequency: 138,
+      start: start,
+      attack: 0.004,
+      decay: 0.12,
+      volume: 0.026,
+      pan: -0.05
+    });
+    scheduleTone(ctx, {
+      type: 'sine',
+      frequency: 128,
+      endFrequency: 105,
+      start: start + 0.075,
+      attack: 0.004,
+      decay: 0.12,
+      volume: 0.018,
+      pan: 0.05
+    });
+  }
+
+  function playShuffleSound() {
+    if (!soundEnabled) return;
+    const ctx = unlockAudio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.02;
+
+    scheduleNoise(ctx, {
+      start: start,
+      duration: 0.48,
+      volume: 0.02,
+      frequency: 320,
+      endFrequency: 2400,
+      q: 0.75,
+      pan: 0
+    });
+
+    [392, 523.25, 659.25, 783.99].forEach((frequency, index) => {
+      scheduleTone(ctx, {
+        type: 'sine',
+        frequency: frequency,
+        start: start + 0.06 + index * 0.105,
+        attack: 0.005,
+        decay: 0.22,
+        volume: 0.025 - index * 0.002,
+        pan: index % 2 === 0 ? -0.22 : 0.22
+      });
+    });
+  }
+
+  function playGameOverSound() {
+    if (!soundEnabled) return;
+    const ctx = unlockAudio();
+    if (!ctx) return;
+    const start = ctx.currentTime + 0.04;
+
+    [523.25, 392, 329.63].forEach((frequency, index) => {
+      const noteStart = start + index * 0.16;
+      scheduleTone(ctx, {
+        type: 'triangle',
+        frequency: frequency,
+        start: noteStart,
+        attack: 0.01,
+        decay: 0.45,
+        volume: 0.032,
+        pan: 0
+      });
+      scheduleTone(ctx, {
+        type: 'sine',
+        frequency: frequency * 2,
+        start: noteStart,
+        attack: 0.01,
+        decay: 0.26,
+        volume: 0.011,
+        pan: 0
+      });
+    });
+  }
+
+  function updateSoundButton() {
+    soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+    soundBtn.classList.toggle('is-muted', !soundEnabled);
+    soundBtn.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
+    soundBtn.title = soundEnabled ? '关闭音效' : '开启音效';
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    try {
+      window.localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? 'on' : 'off');
+    } catch (error) {
+      // Preference persistence is optional.
+    }
+    updateSoundButton();
+
+    if (soundEnabled) {
+      const ctx = unlockAudio();
+      if (!ctx) return;
+      const start = ctx.currentTime + 0.02;
+      scheduleTone(ctx, {
+        type: 'sine',
+        frequency: 659.25,
+        start: start,
+        attack: 0.004,
+        decay: 0.12,
+        volume: 0.045,
+        pan: 0
+      });
+      scheduleTone(ctx, {
+        type: 'sine',
+        frequency: 880,
+        start: start + 0.085,
+        attack: 0.004,
+        decay: 0.16,
+        volume: 0.038,
+        pan: 0
+      });
+    }
+  }
+
+  function cellKey(row, col) {
+    return row * COLS + col;
+  }
+
+  function fruitClass(fruit) {
+    const index = FRUITS.indexOf(fruit);
+    return index >= 0 ? 'f' + index : '';
+  }
+
+  function refreshTileLabel(tile, row, col) {
+    const fruit = tile.dataset.fruit;
+    tile.setAttribute('aria-label', FRUIT_NAMES[fruit] + '，第 ' + (row + 1) + ' 行第 ' + (col + 1) + ' 列');
+  }
+
+  function setTilePosition(tile, row, col) {
+    tile.style.setProperty('--row', String(row));
+    tile.style.setProperty('--col', String(col));
+    tile.dataset.row = String(row);
+    tile.dataset.col = String(col);
+    refreshTileLabel(tile, row, col);
+  }
+
+  function updateTileFruit(tile, fruit) {
+    tile.dataset.fruit = fruit;
+    tile.classList.remove('f0', 'f1', 'f2', 'f3', 'f4', 'f5');
+    tile.classList.add(fruitClass(fruit));
+    const fruitEl = tile.querySelector('.fruit');
+    if (fruitEl) fruitEl.textContent = fruit;
+    refreshTileLabel(tile, Number(tile.dataset.row), Number(tile.dataset.col));
+  }
+
+  function createTile(fruit, row, col, options) {
+    const opts = options || {};
+    const fromRow = opts.fromRow === undefined ? row : opts.fromRow;
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'tile ' + fruitClass(fruit);
+    tile.style.setProperty('--row', String(fromRow));
+    tile.style.setProperty('--col', String(col));
+    tile.dataset.row = String(row);
+    tile.dataset.col = String(col);
+    tile.dataset.fruit = fruit;
+    tile.setAttribute('aria-pressed', 'false');
+
+    const fruitEl = document.createElement('span');
+    fruitEl.className = 'fruit' + (opts.spawn ? ' spawn' : '');
+    fruitEl.textContent = fruit;
+    fruitEl.setAttribute('aria-hidden', 'true');
+    if (opts.delay) fruitEl.style.animationDelay = opts.delay + 'ms';
+    tile.appendChild(fruitEl);
+    refreshTileLabel(tile, row, col);
+
+    tileLayer.appendChild(tile);
+    return tile;
+  }
+
+  function randomFruit() {
+    return FRUITS[Math.floor(Math.random() * FRUITS.length)];
+  }
+
+  function randomGridWithoutMatches() {
+    const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const banned = new Set();
+
+        if (col >= 2 && grid[row][col - 1] === grid[row][col - 2]) {
+          banned.add(grid[row][col - 1]);
+        }
+        if (row >= 2 && grid[row - 1][col] === grid[row - 2][col]) {
+          banned.add(grid[row - 1][col]);
+        }
+
+        const choices = FRUITS.filter(fruit => !banned.has(fruit));
+        grid[row][col] = choices[Math.floor(Math.random() * choices.length)];
+      }
+    }
+
+    return grid;
+  }
+
+  function hasMatchAt(grid, row, col) {
+    const fruit = grid[row][col];
+    if (!fruit) return false;
+
+    let count = 1;
+    for (let c = col - 1; c >= 0 && grid[row][c] === fruit; c--) count++;
+    for (let c = col + 1; c < COLS && grid[row][c] === fruit; c++) count++;
+    if (count >= 3) return true;
+
+    count = 1;
+    for (let r = row - 1; r >= 0 && grid[r][col] === fruit; r--) count++;
+    for (let r = row + 1; r < ROWS && grid[r][col] === fruit; r++) count++;
+    return count >= 3;
+  }
+
+  function findAnyMove(grid) {
+    const g = grid || board;
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (col + 1 < COLS && g[row][col] !== g[row][col + 1]) {
+          [g[row][col], g[row][col + 1]] = [g[row][col + 1], g[row][col]];
+          const createsMatch = hasMatchAt(g, row, col) || hasMatchAt(g, row, col + 1);
+          [g[row][col], g[row][col + 1]] = [g[row][col + 1], g[row][col]];
+          if (createsMatch) return true;
+        }
+
+        if (row + 1 < ROWS && g[row][col] !== g[row + 1][col]) {
+          [g[row][col], g[row + 1][col]] = [g[row + 1][col], g[row][col]];
+          const createsMatch = hasMatchAt(g, row, col) || hasMatchAt(g, row + 1, col);
+          [g[row][col], g[row + 1][col]] = [g[row + 1][col], g[row][col]];
+          if (createsMatch) return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  function buildFallbackGrid() {
+    const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+    // A deterministic clean board with a guaranteed move:
+    // swapping (0,1) with (1,1) turns the top row into three apples.
+    grid[0][0] = FRUITS[0];
+    grid[0][1] = FRUITS[1];
+    grid[0][2] = FRUITS[0];
+    grid[1][0] = FRUITS[2];
+    grid[1][1] = FRUITS[0];
+    grid[1][2] = FRUITS[2];
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        if (grid[row][col]) continue;
+
+        const banned = new Set();
+        if (col >= 2 && grid[row][col - 1] === grid[row][col - 2]) {
+          banned.add(grid[row][col - 1]);
+        }
+        if (row >= 2 && grid[row - 1][col] === grid[row - 2][col]) {
+          banned.add(grid[row - 1][col]);
+        }
+
+        const choices = FRUITS.filter(fruit => !banned.has(fruit));
+        grid[row][col] = choices[Math.floor(Math.random() * choices.length)];
+      }
+    }
+
+    return grid;
+  }
+
+  function generateStableGrid() {
+    for (let attempt = 0; attempt < 250; attempt++) {
+      const grid = randomGridWithoutMatches();
+      if (findAnyMove(grid)) return grid;
+    }
+
+    // The chance of reaching this is astronomically small, but never
+    // hand the player a board without a legal move.
+    return buildFallbackGrid();
+  }
+
+  function findMatchedKeys(grid) {
+    const g = grid || board;
+    const matched = new Set();
+
+    for (let row = 0; row < ROWS; row++) {
+      let col = 0;
+      while (col < COLS) {
+        const fruit = g[row][col];
+        if (!fruit) {
+          col++;
+          continue;
+        }
+
+        let end = col + 1;
+        while (end < COLS && g[row][end] === fruit) end++;
+
+        if (end - col >= 3) {
+          for (let c = col; c < end; c++) matched.add(cellKey(row, c));
+        }
+        col = end;
+      }
+    }
+
+    for (let col = 0; col < COLS; col++) {
+      let row = 0;
+      while (row < ROWS) {
+        const fruit = g[row][col];
+        if (!fruit) {
+          row++;
+          continue;
+        }
+
+        let end = row + 1;
+        while (end < ROWS && g[end][col] === fruit) end++;
+
+        if (end - row >= 3) {
+          for (let r = row; r < end; r++) matched.add(cellKey(r, col));
+        }
+        row = end;
+      }
+    }
+
+    return matched;
+  }
+
+  function groupMatchedKeys(keys) {
+    const remaining = new Set(keys);
+    const groups = [];
+
+    while (remaining.size > 0) {
+      const start = remaining.values().next().value;
+      remaining.delete(start);
+      const queue = [start];
+      const group = [];
+
+      while (queue.length > 0) {
+        const key = queue.pop();
+        group.push(key);
+        const row = Math.floor(key / COLS);
+        const col = key % COLS;
+        const neighbors = [
+          [row - 1, col],
+          [row + 1, col],
+          [row, col - 1],
+          [row, col + 1]
+        ];
+
+        for (const [r, c] of neighbors) {
+          if (r < 0 || r >= ROWS || c < 0 || c >= COLS) continue;
+          const neighborKey = cellKey(r, c);
+          if (remaining.delete(neighborKey)) queue.push(neighborKey);
+        }
+      }
+
+      groups.push(group);
+    }
+
+    return groups;
+  }
+
+  function updateScore(animate) {
+    scoreEl.textContent = score.toLocaleString('zh-CN');
+    if (animate) {
+      scoreEl.classList.remove('pop');
+      void scoreEl.offsetWidth;
+      scoreEl.classList.add('pop');
+    }
+  }
+
+  function updateMoves(animate) {
+    movesEl.textContent = String(movesLeft);
+    movesCard.classList.toggle('low', movesLeft <= 5);
+    if (animate) {
+      movesEl.classList.remove('pop');
+      void movesEl.offsetWidth;
+      movesEl.classList.add('pop');
+    }
+  }
+
+  function clearSelection() {
+    if (!selectedCell) return;
+    const tile = tiles[selectedCell.row] && tiles[selectedCell.row][selectedCell.col];
+    if (tile) {
+      tile.classList.remove('selected');
+      tile.setAttribute('aria-pressed', 'false');
+    }
+    selectedCell = null;
+  }
+
+  function selectCell(row, col) {
+    const tile = tiles[row] && tiles[row][col];
+    if (!tile) return;
+    clearSelection();
+    selectedCell = { row: row, col: col };
+    tile.classList.add('selected');
+    tile.setAttribute('aria-pressed', 'true');
+  }
+
+  function swapCells(a, b) {
+    const boardTemp = board[a.row][a.col];
+    board[a.row][a.col] = board[b.row][b.col];
+    board[b.row][b.col] = boardTemp;
+
+    const tileTemp = tiles[a.row][a.col];
+    tiles[a.row][a.col] = tiles[b.row][b.col];
+    tiles[b.row][b.col] = tileTemp;
+
+    if (tiles[a.row][a.col]) setTilePosition(tiles[a.row][a.col], a.row, a.col);
+    if (tiles[b.row][b.col]) setTilePosition(tiles[b.row][b.col], b.row, b.col);
+  }
+
+  function showToast(title, subtitle) {
+    clearTimeout(toastTimer);
+    toastTitle.textContent = title;
+    toastSub.textContent = subtitle;
+    toastEl.classList.add('show');
+    toastEl.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideToast() {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    toastEl.classList.remove('show');
+    toastEl.setAttribute('aria-hidden', 'true');
+  }
+
+  function showScoreFloat(row, col, text, delay) {
+    const floatEl = document.createElement('div');
+    floatEl.className = 'score-float';
+    floatEl.textContent = text;
+    const leftPercent = (col + 0.5) * (100 / COLS);
+    const topPercent = Math.min(76, Math.max(18, (row + 0.5) * (100 / ROWS)));
+    floatEl.style.left = leftPercent + '%';
+    floatEl.style.top = topPercent + '%';
+    if (delay) floatEl.style.animationDelay = delay + 'ms';
+    fxLayer.appendChild(floatEl);
+
+    window.setTimeout(() => floatEl.remove(), 1100 + (delay || 0));
+  }
+
+  function getClusterCenter(cluster) {
+    let rowTotal = 0;
+    let colTotal = 0;
+
+    for (const key of cluster) {
+      rowTotal += Math.floor(key / COLS);
+      colTotal += key % COLS;
+    }
+
+    return {
+      row: rowTotal / cluster.length,
+      col: colTotal / cluster.length
+    };
+  }
+
+  function spawnScoreFloats(clusters, pointsPerFruit, multiplier) {
+    clusters.forEach((cluster, index) => {
+      const center = getClusterCenter(cluster);
+      const gained = cluster.length * pointsPerFruit;
+      const combo = multiplier > 1 ? ' × ' + multiplier : '';
+      showScoreFloat(center.row, center.col, '+' + gained + combo, index * 70);
+    });
+  }
+
+  async function collapseAndRefill(token) {
+    const newTiles = [];
+
+    for (let col = 0; col < COLS; col++) {
+      const survivors = [];
+
+      for (let row = ROWS - 1; row >= 0; row--) {
+        if (board[row][col] !== null) {
+          survivors.push({ fruit: board[row][col], tile: tiles[row][col] });
+        }
+        board[row][col] = null;
+        tiles[row][col] = null;
+      }
+
+      const emptyCount = ROWS - survivors.length;
+
+      for (let i = 0; i < survivors.length; i++) {
+        const row = ROWS - 1 - i;
+        const survivor = survivors[i];
+        board[row][col] = survivor.fruit;
+        tiles[row][col] = survivor.tile;
+        if (survivor.tile) setTilePosition(survivor.tile, row, col);
+      }
+
+      for (let row = 0; row < emptyCount; row++) {
+        const fruit = randomFruit();
+        const startRow = row - emptyCount;
+        const newTile = createTile(fruit, row, col, { fromRow: startRow });
+        board[row][col] = fruit;
+        tiles[row][col] = newTile;
+        newTiles.push({ tile: newTile, row: row, col: col });
+      }
+    }
+
+    if (newTiles.length > 0) {
+      // Let the browser paint the tiles above the board first, then drop them in.
+      void tileLayer.offsetHeight;
+      requestAnimationFrame(() => {
+        for (const item of newTiles) {
+          setTilePosition(item.tile, item.row, item.col);
+        }
+      });
+    }
+
+    await wait(370);
+    return token === gameToken;
+  }
+
+  async function clearAndCollapse(matched, pointsPerFruit, multiplier, token) {
+    const clusters = groupMatchedKeys(matched);
+    clusters.forEach((cluster, index) => {
+      const center = getClusterCenter(cluster);
+      playMatchSound(cluster.length, multiplier, index, center.col);
+    });
+    spawnScoreFloats(clusters, pointsPerFruit, multiplier);
+
+    for (const key of matched) {
+      const row = Math.floor(key / COLS);
+      const col = key % COLS;
+      const tile = tiles[row][col];
+      if (tile) tile.classList.add('clearing');
+    }
+
+    await wait(360);
+    if (token !== gameToken) return false;
+
+    for (const key of matched) {
+      const row = Math.floor(key / COLS);
+      const col = key % COLS;
+      const tile = tiles[row][col];
+      if (tile) tile.remove();
+      tiles[row][col] = null;
+      board[row][col] = null;
+    }
+
+    return await collapseAndRefill(token);
+  }
+
+  async function resolveBoard(token) {
+    let multiplier = 1;
+
+    while (true) {
+      const matched = findMatchedKeys();
+      if (matched.size === 0) break;
+
+      const gained = matched.size * MATCH_POINTS * multiplier;
+      score += gained;
+      updateScore(true);
+
+      const resolved = await clearAndCollapse(matched, MATCH_POINTS * multiplier, multiplier, token);
+      if (!resolved || token !== gameToken) return;
+
+      multiplier++;
+    }
+  }
+
+  async function autoShuffle(token) {
+    clearSelection();
+    hideToast();
+    playShuffleSound();
+    showToast('没有可用步数', '水果们正在自动重新洗牌…');
+    boardEl.classList.add('is-shuffling');
+
+    await wait(520);
+    if (token !== gameToken) return;
+
+    const shuffled = generateStableGrid();
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        board[row][col] = shuffled[row][col];
+        if (tiles[row][col]) updateTileFruit(tiles[row][col], shuffled[row][col]);
+      }
+    }
+
+    boardEl.classList.remove('is-shuffling');
+    boardEl.classList.add('is-revealing');
+
+    await wait(470);
+    if (token !== gameToken) return;
+
+    hideToast();
+    boardEl.classList.remove('is-revealing');
+    busy = false;
+  }
+
+  function finishGame(token) {
+    if (token !== gameToken) return;
+    gameOver = true;
+    busy = true;
+    clearSelection();
+    hideToast();
+    playGameOverSound();
+    finalScoreEl.textContent = score.toLocaleString('zh-CN');
+    overlayEl.classList.add('show');
+    overlayEl.setAttribute('aria-hidden', 'false');
+    window.setTimeout(() => {
+      if (token === gameToken) playAgainBtn.focus({ preventScroll: true });
+    }, 260);
+  }
+
+  async function attemptSwap(a, b) {
+    if (busy || gameOver) return;
+
+    const token = gameToken;
+    busy = true;
+    clearSelection();
+    playSwapSound();
+
+    swapCells(a, b);
+    await wait(250);
+    if (token !== gameToken) return;
+
+    const matched = findMatchedKeys();
+
+    if (matched.size === 0) {
+      playInvalidSound();
+      swapCells(a, b);
+      const firstTile = tiles[a.row][a.col];
+      const secondTile = tiles[b.row][b.col];
+      if (firstTile) firstTile.classList.add('invalid');
+      if (secondTile) secondTile.classList.add('invalid');
+
+      await wait(390);
+      if (token !== gameToken) return;
+
+      if (firstTile) firstTile.classList.remove('invalid');
+      if (secondTile) secondTile.classList.remove('invalid');
+      busy = false;
+      return;
+    }
+
+    movesLeft = Math.max(0, movesLeft - 1);
+    updateMoves(true);
+
+    await resolveBoard(token);
+    if (token !== gameToken) return;
+
+    if (movesLeft <= 0) {
+      finishGame(token);
+      return;
+    }
+
+    if (!findAnyMove(board)) {
+      await autoShuffle(token);
+      if (token !== gameToken) return;
+    }
+
+    busy = false;
+  }
+
+  function onTileClick(event) {
+    if (soundEnabled) unlockAudio();
+    if (busy || gameOver) return;
+
+    const target = event.target.closest ? event.target.closest('.tile') : null;
+    if (!target || !tileLayer.contains(target)) return;
+
+    const row = Number(target.dataset.row);
+    const col = Number(target.dataset.col);
+    if (!Number.isInteger(row) || !Number.isInteger(col)) return;
+
+    if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
+      clearSelection();
+      return;
+    }
+
+    if (!selectedCell) {
+      selectCell(row, col);
+      return;
+    }
+
+    const previous = selectedCell;
+    const isNeighbor = Math.abs(previous.row - row) + Math.abs(previous.col - col) === 1;
+
+    if (!isNeighbor) {
+      selectCell(row, col);
+      return;
+    }
+
+    const a = { row: previous.row, col: previous.col };
+    const b = { row: row, col: col };
+    clearSelection();
+    attemptSwap(a, b);
+  }
+
+  async function startGame() {
+    const token = ++gameToken;
+    busy = true;
+    gameOver = false;
+    selectedCell = null;
+    score = 0;
+    movesLeft = START_MOVES;
+
+    hideToast();
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    overlayEl.classList.remove('show');
+    overlayEl.setAttribute('aria-hidden', 'true');
+    boardEl.classList.remove('is-shuffling', 'is-revealing');
+    movesCard.classList.remove('low');
+    fxLayer.replaceChildren();
+    tileLayer.replaceChildren();
+
+    updateScore(false);
+    updateMoves(false);
+    movesEl.classList.remove('pop');
+
+    const freshBoard = generateStableGrid();
+    board = freshBoard.map(row => row.slice());
+    tiles = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const tile = createTile(board[row][col], row, col, {
+          spawn: true,
+          delay: (row + col) * 8
+        });
+        tiles[row][col] = tile;
+      }
+    }
+
+    await wait(540);
+    if (token !== gameToken) return;
+
+    // Keep the one-shot entrance animation from restarting later when a
+    // selected/clearing/reshuffle animation is removed from a tile.
+    for (const fruitEl of tileLayer.querySelectorAll('.fruit.spawn')) {
+      fruitEl.classList.remove('spawn');
+      fruitEl.style.animationDelay = '';
+    }
+
+    busy = false;
+  }
+
+  function buildGridBackground() {
+    const fragment = document.createDocumentFragment();
+    for (let row = 0; row < ROWS; row++) {
+      for (let col = 0; col < COLS; col++) {
+        const well = document.createElement('div');
+        well.className = 'well' + ((row + col) % 2 === 1 ? ' dark' : '');
+        fragment.appendChild(well);
+      }
+    }
+    gridBg.appendChild(fragment);
+  }
+
+  soundBtn.addEventListener('click', toggleSound);
+  restartBtn.addEventListener('click', startGame);
+  playAgainBtn.addEventListener('click', startGame);
+  tileLayer.addEventListener('click', onTileClick);
+
+  document.addEventListener('pointerdown', () => {
+    if (soundEnabled) unlockAudio();
+  }, { once: true, passive: true });
+
+  updateSoundButton();
+  buildGridBackground();
+  startGame();
+</script>
+</body>
+</html>
